@@ -115,9 +115,7 @@ export function PublishTool() {
 
       // Crear mutaciones para eliminar
       const mutations = publishedDrafts.map((draft) => ({
-        delete: {
-          _id: draft._id,
-        },
+        delete: draft._id,
       }))
 
       // Ejecutar mutaciones
