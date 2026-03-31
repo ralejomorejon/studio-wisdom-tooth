@@ -17,10 +17,7 @@ async function setupWebhook() {
       events: ['create', 'update', 'delete'],
       filter: '_type == "product" || _type == "post"', // Ajusta según tus tipos
     })
-    console.log('✅ Webhook creado:', webhook)
-  } catch (error) {
-    console.error('❌ Error creando webhook:', error)
-  }
+  } catch (error) {}
 }
 
 setupWebhook()
