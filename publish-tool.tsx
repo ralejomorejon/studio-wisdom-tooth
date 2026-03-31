@@ -113,13 +113,10 @@ export function PublishTool() {
       setMessageType('loading')
       setMessage('Eliminando borradores publicados...')
 
-      // Crear mutaciones para eliminar
-      const mutations = publishedDrafts.map((draft) => ({
-        delete: draft._id,
-      }))
-
-      // Ejecutar mutaciones
-      await client.mutate(mutations)
+      // Eliminar cada borrador por separado
+      for (const draft of publishedDrafts) {
+        await client.delete(draft._id)
+      }
 
       setMessageType('success')
       setMessage(`✅ ${publishedDrafts.length} borradores eliminados exitosamente`)
