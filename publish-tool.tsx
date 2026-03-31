@@ -19,8 +19,10 @@ export function PublishTool() {
   const theme = useTheme()
   const isDark = theme.name === 'studio-dark'
   const [drafts, setDrafts] = useState<any[]>([])
+  const [publishedDrafts, setPublishedDrafts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info' | 'loading'>('info')
 
@@ -30,6 +32,22 @@ export function PublishTool() {
       setLoading(true)
       const result = await client.fetch(`*[_id in path("drafts.**")]`)
       setDrafts(result)
+
+      // Identificar cuáles borradores ya tienen versión publicada
+      if (result.length > 0) {
+        const publishedIds = result.map((draft) => draft._id.replace('drafts.', ''))
+        const publishedCheck = await client.fetch(
+          `*[_id in $ids]`,
+          {ids: publishedIds}
+        )
+
+        // Drafts que tienen versión publicada
+        const published = result.filter((draft) => {
+          const publishedId = draft._id.replace('drafts.', '')
+          return publishedCheck.some((p) => p._id === publishedId)
+        })
+        setPublishedDrafts(published)
+      }
     } catch (error) {
       setMessageType('error')
       setMessage('Error al obtener borradores')
@@ -81,6 +99,44 @@ export function PublishTool() {
       setPublishing(false)
     }
   }, [drafts, client, fetchDrafts])
+
+  // Eliminar borradores que ya están publicados
+  const handleDeletePublished = useCallback(async () => {
+    if (publishedDrafts.length === 0) {
+      setMessageType('info')
+      setMessage('No hay borradores publicados para eliminar')
+      return
+    }
+
+    try {
+      setDeleting(true)
+      setMessageType('loading')
+      setMessage('Eliminando borradores publicados...')
+
+      // Crear mutaciones para eliminar
+      const mutations = publishedDrafts.map((draft) => ({
+        delete: {
+          _id: draft._id,
+        },
+      }))
+
+      // Ejecutar mutaciones
+      await client.mutate(mutations)
+
+      setMessageType('success')
+      setMessage(`✅ ${publishedDrafts.length} borradores eliminados exitosamente`)
+      setPublishedDrafts([])
+
+      // Refrescar después de 2 segundos
+      setTimeout(() => fetchDrafts(), 2000)
+    } catch (error) {
+      setMessageType('error')
+      setMessage(`${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error(error)
+    } finally {
+      setDeleting(false)
+    }
+  }, [publishedDrafts, client, fetchDrafts])
 
   // Cargar borradores al montar
   useEffect(() => {
@@ -211,6 +267,26 @@ export function PublishTool() {
           }}
         />
 
+        {/* Delete Published Drafts Button */}
+        {publishedDrafts.length > 0 && (
+          <Button
+            onClick={handleDeletePublished}
+            disabled={deleting || loading}
+            mode="ghost"
+            tone="critical"
+            text={
+              deleting
+                ? 'Eliminando...'
+                : `Eliminar ${publishedDrafts.length} borrador${publishedDrafts.length !== 1 ? 's' : ''} publicado${publishedDrafts.length !== 1 ? 's' : ''}`
+            }
+            style={{
+              width: '100%',
+              minHeight: '48px',
+              fontSize: '14px',
+            }}
+          />
+        )}
+
         {/* Message */}
         {message && (
           <Card
@@ -298,6 +374,23 @@ export function PublishTool() {
                           }}
                         >
                           {draft.category}
+                        </div>
+                      )}
+                      {publishedDrafts.some((p) => p._id === draft._id) && (
+                        <div
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            backgroundColor: isDark ? '#3d2200' : '#fed7aa',
+                            color: isDark ? '#fcd34d' : '#92400e',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          📌 Publicado
                         </div>
                       )}
                     </Inline>
