@@ -10,17 +10,11 @@ type ProductOption = {
   values?: string[]
 }
 
-type ProductVariantSelection = {
-  option?: string
-  value?: string
-}
-
 type ProductVariant = {
   title?: string
-  sku?: string
+  optionValue?: string
   price?: number
   stock?: number
-  selections?: ProductVariantSelection[]
 }
 
 const normalize = (value: unknown): string =>
@@ -34,73 +28,34 @@ const validateOptions = (options?: ProductOption[]): true | string => {
     return true
   }
 
-  const seenOptionNames = new Set<string>()
+  if (options.length > 1) {
+    return 'Only one variant option is supported. Keep a single option (for example: Color).'
+  }
 
-  for (const option of options) {
-    const optionName = normalize(option?.name)
-    if (!optionName) {
-      return 'Each option requires a name.'
-    }
+  const option = options[0]
+  const optionName = normalize(option?.name)
+  if (!optionName) {
+    return 'The variant option requires a name.'
+  }
 
-    if (seenOptionNames.has(optionName)) {
-      return `Option "${toLabel(option?.name)}" is duplicated.`
-    }
-    seenOptionNames.add(optionName)
+  const optionValues = Array.isArray(option?.values) ? option.values : []
+  if (optionValues.length === 0) {
+    return `Option "${toLabel(option?.name)}" requires at least one value.`
+  }
 
-    const optionValues = Array.isArray(option?.values) ? option.values : []
-    if (optionValues.length === 0) {
-      return `Option "${toLabel(option?.name)}" requires at least one value.`
+  const seenValues = new Set<string>()
+  for (const rawValue of optionValues) {
+    const normalizedValue = normalize(rawValue)
+    if (!normalizedValue) {
+      return `Option "${toLabel(option?.name)}" contains an empty value.`
     }
-
-    const seenValues = new Set<string>()
-    for (const rawValue of optionValues) {
-      const normalizedValue = normalize(rawValue)
-      if (!normalizedValue) {
-        return `Option "${toLabel(option?.name)}" contains an empty value.`
-      }
-      if (seenValues.has(normalizedValue)) {
-        return `Option "${toLabel(option?.name)}" has duplicated value "${rawValue}".`
-      }
-      seenValues.add(normalizedValue)
+    if (seenValues.has(normalizedValue)) {
+      return `Option "${toLabel(option?.name)}" has duplicated value "${rawValue}".`
     }
+    seenValues.add(normalizedValue)
   }
 
   return true
-}
-
-const buildOptionMap = (options?: ProductOption[]): Map<string, Set<string>> => {
-  const optionMap = new Map<string, Set<string>>()
-  if (!Array.isArray(options)) {
-    return optionMap
-  }
-
-  options.forEach((option) => {
-    const optionName = normalize(option?.name)
-    if (!optionName) {
-      return
-    }
-    const values = new Set<string>()
-    ;(option.values || []).forEach((value) => {
-      const normalizedValue = normalize(value)
-      if (normalizedValue) {
-        values.add(normalizedValue)
-      }
-    })
-    optionMap.set(optionName, values)
-  })
-
-  return optionMap
-}
-
-const variantCombinationKey = (selections?: ProductVariantSelection[]): string => {
-  if (!Array.isArray(selections) || selections.length === 0) {
-    return ''
-  }
-
-  return selections
-    .map((selection) => `${normalize(selection.option)}:${normalize(selection.value)}`)
-    .sort()
-    .join('|')
 }
 
 const validateVariants = (variants?: ProductVariant[], options?: ProductOption[]): true | string => {
@@ -108,63 +63,37 @@ const validateVariants = (variants?: ProductVariant[], options?: ProductOption[]
     return true
   }
 
-  const optionMap = buildOptionMap(options)
-  const requiresSelections = optionMap.size > 0
-  const seenSkus = new Set<string>()
-  const seenCombinationKeys = new Set<string>()
+  const configuredOption = Array.isArray(options) ? options[0] : undefined
+  const configuredOptionName = configuredOption?.name?.trim() || ''
+  const hasConfiguredOption = configuredOptionName.length > 0
+  const validValues = new Set(
+    (configuredOption?.values || []).map((value) => normalize(value)).filter(Boolean),
+  )
+  const seenOptionValues = new Set<string>()
 
   for (const variant of variants) {
-    const sku = normalize(variant?.sku)
-    if (!sku) {
-      return 'Each variant requires a SKU.'
-    }
-    if (seenSkus.has(sku)) {
-      return `Variant SKU "${toLabel(variant?.sku)}" is duplicated.`
-    }
-    seenSkus.add(sku)
+    const optionValue = normalize(variant?.optionValue)
 
-    const selections = Array.isArray(variant?.selections) ? variant.selections : []
-    if (!requiresSelections && selections.length > 0) {
-      return 'Define options before assigning selections to variants.'
+    if (!hasConfiguredOption && optionValue) {
+      return 'Define a Variant Option before assigning option values to variants.'
     }
 
-    if (!requiresSelections) {
+    if (!hasConfiguredOption) {
       continue
     }
 
-    if (selections.length !== optionMap.size) {
-      return `Variant "${toLabel(variant?.title || variant?.sku)}" must define all configured options.`
+    if (!optionValue) {
+      return `Variant "${toLabel(variant?.title)}" requires a value for option "${configuredOptionName}".`
     }
 
-    const selectedOptions = new Set<string>()
-    for (const selection of selections) {
-      const optionName = normalize(selection?.option)
-      const optionValue = normalize(selection?.value)
-
-      if (!optionName || !optionValue) {
-        return `Variant "${toLabel(variant?.title || variant?.sku)}" has an incomplete selection.`
-      }
-
-      if (!optionMap.has(optionName)) {
-        return `Variant "${toLabel(variant?.title || variant?.sku)}" uses unknown option "${toLabel(selection?.option)}".`
-      }
-
-      if (selectedOptions.has(optionName)) {
-        return `Variant "${toLabel(variant?.title || variant?.sku)}" repeats option "${toLabel(selection?.option)}".`
-      }
-      selectedOptions.add(optionName)
-
-      const validValues = optionMap.get(optionName)
-      if (!validValues || !validValues.has(optionValue)) {
-        return `Variant "${toLabel(variant?.title || variant?.sku)}" uses value "${toLabel(selection?.value)}" that is not listed in option "${toLabel(selection?.option)}".`
-      }
+    if (!validValues.has(optionValue)) {
+      return `Variant "${toLabel(variant?.title)}" uses value "${toLabel(variant?.optionValue)}" that is not listed in option "${configuredOptionName}".`
     }
 
-    const combinationKey = variantCombinationKey(selections)
-    if (seenCombinationKeys.has(combinationKey)) {
-      return 'Two variants share the same option combination.'
+    if (seenOptionValues.has(optionValue)) {
+      return `Variant value "${toLabel(variant?.optionValue)}" is duplicated.`
     }
-    seenCombinationKeys.add(combinationKey)
+    seenOptionValues.add(optionValue)
   }
 
   return true
@@ -195,12 +124,6 @@ export const productType = defineType({
       title: 'Description',
       type: 'text',
       validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'sku',
-      title: 'Base SKU',
-      type: 'string',
-      description: 'Optional base SKU. Variants should have their own SKU.',
     }),
     defineField({
       name: 'price',
@@ -322,7 +245,7 @@ export const productType = defineType({
     }),
     defineField({
       name: 'options',
-      title: 'Variant Options',
+      title: 'Variant Option',
       type: 'array',
       of: [
         {
@@ -333,7 +256,7 @@ export const productType = defineType({
               title: 'Option Name',
               type: 'string',
               validation: (rule) => rule.required(),
-              description: 'Examples: Color, Size, Material',
+              description: 'Use a single option such as Color, Presentation, or Size.',
             }),
             defineField({
               name: 'values',
@@ -355,8 +278,10 @@ export const productType = defineType({
           },
         },
       ],
-      validation: (rule) => rule.custom((options) => validateOptions(options as ProductOption[])),
-      description: 'Defines which attributes customers can choose before adding to cart.',
+      validation: (rule) =>
+        rule.max(1).custom((options) => validateOptions(options as ProductOption[])),
+      description:
+        'Defines the single attribute customers can choose before adding to cart.',
     }),
     defineField({
       name: 'variants',
@@ -370,13 +295,30 @@ export const productType = defineType({
               name: 'title',
               title: 'Variant Title',
               type: 'string',
-              description: 'Optional internal label, for example Blue / Medium.',
+              description: 'Optional internal label, for example Azul.',
             }),
             defineField({
-              name: 'sku',
-              title: 'Variant SKU',
+              name: 'optionValue',
+              title: 'Option Value',
               type: 'string',
-              validation: (rule) => rule.required(),
+              validation: (rule) =>
+                rule.custom((value, context) => {
+                  const configuredOption =
+                    (context.document as {options?: ProductOption[]})?.options?.[0]
+                  const hasConfiguredOption =
+                    typeof configuredOption?.name === 'string' &&
+                    configuredOption.name.trim().length > 0
+
+                  if (
+                    hasConfiguredOption &&
+                    (typeof value !== 'string' || value.trim().length === 0)
+                  ) {
+                    return `Required when option "${configuredOption?.name}" is configured.`
+                  }
+
+                  return true
+                }),
+              description: 'Value for the Variant Option, for example Blue.',
             }),
             defineField({
               name: 'price',
@@ -396,62 +338,25 @@ export const productType = defineType({
               type: 'image',
               options: {hotspot: true},
             }),
-            defineField({
-              name: 'selections',
-              title: 'Option Selections',
-              type: 'array',
-              of: [
-                {
-                  type: 'object',
-                  fields: [
-                    defineField({
-                      name: 'option',
-                      title: 'Option',
-                      type: 'string',
-                      validation: (rule) => rule.required(),
-                    }),
-                    defineField({
-                      name: 'value',
-                      title: 'Value',
-                      type: 'string',
-                      validation: (rule) => rule.required(),
-                    }),
-                  ],
-                  preview: {
-                    select: {
-                      title: 'option',
-                      subtitle: 'value',
-                    },
-                  },
-                },
-              ],
-              validation: (rule) => rule.required().min(1),
-            }),
           ],
           preview: {
             select: {
               title: 'title',
-              sku: 'sku',
+              optionValue: 'optionValue',
               price: 'price',
               stock: 'stock',
-              selections: 'selections',
             },
-            prepare: ({title, sku, price, stock, selections}) => {
-              const selectionText = Array.isArray(selections)
-                ? selections
-                    .map((selection: ProductVariantSelection) => {
-                      const option = selection?.option || 'Option'
-                      const value = selection?.value || 'Value'
-                      return `${option}: ${value}`
-                    })
-                    .join(' | ')
-                : ''
-              const parts = [selectionText, sku ? `SKU: ${sku}` : '', typeof price === 'number' ? `$${price}` : '', typeof stock === 'number' ? `Stock: ${stock}` : '']
+            prepare: ({title, optionValue, price, stock}) => {
+              const parts = [
+                optionValue ? `Value: ${optionValue}` : '',
+                typeof price === 'number' ? `$${price}` : '',
+                typeof stock === 'number' ? `Stock: ${stock}` : '',
+              ]
                 .filter(Boolean)
                 .join(' - ')
 
               return {
-                title: title || sku || 'Variant',
+                title: title || optionValue || 'Variant',
                 subtitle: parts,
               }
             },
@@ -463,7 +368,8 @@ export const productType = defineType({
           const options = (context.document as {options?: ProductOption[]})?.options
           return validateVariants(variants as ProductVariant[], options)
         }),
-      description: 'Each variant is a sellable product version with its own SKU, stock, and price.',
+      description:
+        'Each variant is a sellable product version with one option value, price, stock, and optional image.',
     }),
     defineField({
       name: 'colors',
