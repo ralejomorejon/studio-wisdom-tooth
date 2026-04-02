@@ -5,12 +5,8 @@ type ProductAttribute = {
   value?: string
 }
 
-type ProductOption = {
-  name?: string
-  values?: string[]
-}
-
 type ProductVariant = {
+  name?: string
   title?: string
   optionValue?: string
   price?: number
@@ -23,77 +19,24 @@ const normalize = (value: unknown): string =>
 const toLabel = (value: unknown): string =>
   typeof value === 'string' && value.trim() ? value.trim() : 'Unnamed'
 
-const validateOptions = (options?: ProductOption[]): true | string => {
-  if (!Array.isArray(options) || options.length === 0) {
-    return true
-  }
-
-  if (options.length > 1) {
-    return 'Only one variant option is supported. Keep a single option (for example: Color).'
-  }
-
-  const option = options[0]
-  const optionName = normalize(option?.name)
-  if (!optionName) {
-    return 'The variant option requires a name.'
-  }
-
-  const optionValues = Array.isArray(option?.values) ? option.values : []
-  if (optionValues.length === 0) {
-    return `Option "${toLabel(option?.name)}" requires at least one value.`
-  }
-
-  const seenValues = new Set<string>()
-  for (const rawValue of optionValues) {
-    const normalizedValue = normalize(rawValue)
-    if (!normalizedValue) {
-      return `Option "${toLabel(option?.name)}" contains an empty value.`
-    }
-    if (seenValues.has(normalizedValue)) {
-      return `Option "${toLabel(option?.name)}" has duplicated value "${rawValue}".`
-    }
-    seenValues.add(normalizedValue)
-  }
-
-  return true
-}
-
-const validateVariants = (variants?: ProductVariant[], options?: ProductOption[]): true | string => {
+const validateVariants = (variants?: ProductVariant[]): true | string => {
   if (!Array.isArray(variants) || variants.length === 0) {
     return true
   }
 
-  const configuredOption = Array.isArray(options) ? options[0] : undefined
-  const configuredOptionName = configuredOption?.name?.trim() || ''
-  const hasConfiguredOption = configuredOptionName.length > 0
-  const validValues = new Set(
-    (configuredOption?.values || []).map((value) => normalize(value)).filter(Boolean),
-  )
-  const seenOptionValues = new Set<string>()
+  const seenNames = new Set<string>()
 
   for (const variant of variants) {
-    const optionValue = normalize(variant?.optionValue)
+    const variantName = normalize(variant?.name || variant?.title || variant?.optionValue)
 
-    if (!hasConfiguredOption && optionValue) {
-      return 'Define a Variant Option before assigning option values to variants.'
+    if (!variantName) {
+      return 'Each variant requires a Variant Name.'
     }
 
-    if (!hasConfiguredOption) {
-      continue
+    if (seenNames.has(variantName)) {
+      return `Variant "${toLabel(variant?.name || variant?.title || variant?.optionValue)}" is duplicated.`
     }
-
-    if (!optionValue) {
-      return `Variant "${toLabel(variant?.title)}" requires a value for option "${configuredOptionName}".`
-    }
-
-    if (!validValues.has(optionValue)) {
-      return `Variant "${toLabel(variant?.title)}" uses value "${toLabel(variant?.optionValue)}" that is not listed in option "${configuredOptionName}".`
-    }
-
-    if (seenOptionValues.has(optionValue)) {
-      return `Variant value "${toLabel(variant?.optionValue)}" is duplicated.`
-    }
-    seenOptionValues.add(optionValue)
+    seenNames.add(variantName)
   }
 
   return true
@@ -244,46 +187,6 @@ export const productType = defineType({
       description: 'General product attributes, for example Material, Use, or Package Size.',
     }),
     defineField({
-      name: 'options',
-      title: 'Variant Option',
-      type: 'array',
-      of: [
-        {
-          type: 'object',
-          fields: [
-            defineField({
-              name: 'name',
-              title: 'Option Name',
-              type: 'string',
-              validation: (rule) => rule.required(),
-              description: 'Use a single option such as Color, Presentation, or Size.',
-            }),
-            defineField({
-              name: 'values',
-              title: 'Values',
-              type: 'array',
-              of: [{type: 'string'}],
-              validation: (rule) => rule.required().min(1),
-            }),
-          ],
-          preview: {
-            select: {
-              title: 'name',
-              values: 'values',
-            },
-            prepare: ({title, values}) => ({
-              title: title || 'Option',
-              subtitle: Array.isArray(values) ? values.join(', ') : '',
-            }),
-          },
-        },
-      ],
-      validation: (rule) =>
-        rule.max(1).custom((options) => validateOptions(options as ProductOption[])),
-      description:
-        'Defines the single attribute customers can choose before adding to cart.',
-    }),
-    defineField({
       name: 'variants',
       title: 'Variants',
       type: 'array',
@@ -292,33 +195,10 @@ export const productType = defineType({
           type: 'object',
           fields: [
             defineField({
-              name: 'title',
-              title: 'Variant Title',
+              name: 'name',
+              title: 'Variant Name',
               type: 'string',
-              description: 'Optional internal label, for example Azul.',
-            }),
-            defineField({
-              name: 'optionValue',
-              title: 'Option Value',
-              type: 'string',
-              validation: (rule) =>
-                rule.custom((value, context) => {
-                  const configuredOption =
-                    (context.document as {options?: ProductOption[]})?.options?.[0]
-                  const hasConfiguredOption =
-                    typeof configuredOption?.name === 'string' &&
-                    configuredOption.name.trim().length > 0
-
-                  if (
-                    hasConfiguredOption &&
-                    (typeof value !== 'string' || value.trim().length === 0)
-                  ) {
-                    return `Required when option "${configuredOption?.name}" is configured.`
-                  }
-
-                  return true
-                }),
-              description: 'Value for the Variant Option, for example Blue.',
+              description: 'Example: Azul, Negro, 500ml, XL.',
             }),
             defineField({
               name: 'price',
@@ -341,14 +221,12 @@ export const productType = defineType({
           ],
           preview: {
             select: {
-              title: 'title',
-              optionValue: 'optionValue',
+              title: 'name',
               price: 'price',
               stock: 'stock',
             },
-            prepare: ({title, optionValue, price, stock}) => {
+            prepare: ({title, price, stock}) => {
               const parts = [
-                optionValue ? `Value: ${optionValue}` : '',
                 typeof price === 'number' ? `$${price}` : '',
                 typeof stock === 'number' ? `Stock: ${stock}` : '',
               ]
@@ -356,20 +234,16 @@ export const productType = defineType({
                 .join(' - ')
 
               return {
-                title: title || optionValue || 'Variant',
+                title: title || 'Variant',
                 subtitle: parts,
               }
             },
           },
         },
       ],
-      validation: (rule) =>
-        rule.custom((variants, context) => {
-          const options = (context.document as {options?: ProductOption[]})?.options
-          return validateVariants(variants as ProductVariant[], options)
-        }),
+      validation: (rule) => rule.custom((variants) => validateVariants(variants as ProductVariant[])),
       description:
-        'Each variant is a sellable product version with one option value, price, stock, and optional image.',
+        'Single field to define product variants with name, price, stock, and optional image.',
     }),
     defineField({
       name: 'colors',
@@ -402,7 +276,7 @@ export const productType = defineType({
         },
       ],
       description:
-        'Legacy color field kept for backward compatibility. New products should use Variant Options and Variants.',
+        'Legacy color field kept for backward compatibility. New products should use Variants.',
     }),
     defineField({
       name: 'details',
