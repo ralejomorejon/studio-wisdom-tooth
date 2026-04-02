@@ -1,15 +1,5 @@
 import {useCallback, useEffect, useState} from 'react'
-import {
-  Card,
-  Button,
-  Text,
-  Spinner,
-  Box,
-  Stack,
-  Heading,
-  Badge,
-  Inline,
-} from '@sanity/ui'
+import {Card, Button, Text, Spinner, Box, Stack, Heading, Badge, Inline} from '@sanity/ui'
 import {useClient} from 'sanity'
 import {PublishIcon} from '@sanity/icons'
 import {useTheme} from '@sanity/ui'
@@ -36,10 +26,7 @@ export function PublishTool() {
       // Identificar cuáles borradores ya tienen versión publicada
       if (result.length > 0) {
         const publishedIds = result.map((draft) => draft._id.replace('drafts.', ''))
-        const publishedCheck = await client.fetch(
-          `*[_id in $ids]`,
-          {ids: publishedIds}
-        )
+        const publishedCheck = await client.fetch(`*[_id in $ids]`, {ids: publishedIds})
 
         // Drafts que tienen versión publicada
         const published = result.filter((draft) => {
@@ -201,7 +188,10 @@ export function PublishTool() {
                 Bulk Publish
               </Heading>
             </Inline>
-            <Text size={2} style={{color: isDark ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'}}>
+            <Text
+              size={2}
+              style={{color: isDark ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'}}
+            >
               Publica todos tus borradores de una vez
             </Text>
           </Stack>
@@ -229,7 +219,9 @@ export function PublishTool() {
                 mode={drafts.length > 0 ? 'default' : 'outline'}
                 tone={drafts.length > 0 ? 'primary' : 'default'}
               >
-                {loading ? 'Cargando...' : `${drafts.length} borrador${drafts.length !== 1 ? 's' : ''}`}
+                {loading
+                  ? 'Cargando...'
+                  : `${drafts.length} borrador${drafts.length !== 1 ? 's' : ''}`}
               </Badge>
               {drafts.length > 0 && !loading && (
                 <Text size={0} style={{color: isDark ? '#a0a0a0' : '#6b7280'}}>
@@ -350,7 +342,11 @@ export function PublishTool() {
                       >
                         ✓
                       </Text>
-                      <Text size={0} weight="medium" style={{color: isDark ? '#d4d4d4' : '#1f2937'}}>
+                      <Text
+                        size={0}
+                        weight="medium"
+                        style={{color: isDark ? '#d4d4d4' : '#1f2937'}}
+                      >
                         {draft.name || draft.title || draft._type}
                       </Text>
                       {draft.category && (
