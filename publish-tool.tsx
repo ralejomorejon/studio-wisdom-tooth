@@ -62,7 +62,7 @@ export function PublishTool() {
         const {_id, _rev, _createdAt, _updatedAt, ...cleanDraft} = draft
 
         return {
-          createIfNotExists: {
+          createOrReplace: {
             ...cleanDraft,
             _id: _id.replace('drafts.', ''),
           },

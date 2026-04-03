@@ -14,8 +14,8 @@ async function setupWebhook() {
       _type: 'webhook',
       name: 'GitHub Pages Deploy',
       url: process.env.WORKER_URL, // Tu Worker URL
-      events: ['create', 'update', 'delete'],
-      filter: '_type == "product" || _type == "post"', // Ajusta según tus tipos
+      events: ['create', 'update'],
+      filter: '_type in ["product", "post"] && !(_id in path("drafts.**"))', // Excluye drafts para evitar ruido
     })
   } catch (error) {}
 }
