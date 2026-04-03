@@ -136,6 +136,28 @@ export const productType = defineType({
       title: 'Main Image',
       type: 'image',
       options: {hotspot: true},
+      description: 'Primary image used as default cover and fallback.',
+    }),
+    defineField({
+      name: 'images',
+      title: 'Product Gallery',
+      type: 'array',
+      of: [
+        {
+          type: 'image',
+          options: {hotspot: true},
+          fields: [
+            defineField({
+              name: 'alt',
+              title: 'Alt text',
+              type: 'string',
+              description: 'Optional accessible description for this image.',
+            }),
+          ],
+        },
+      ],
+      description:
+        'Optional additional images for product gallery in storefront. First item can be used as fallback cover.',
     }),
     defineField({
       name: 'attributes',
@@ -241,7 +263,8 @@ export const productType = defineType({
           },
         },
       ],
-      validation: (rule) => rule.custom((variants) => validateVariants(variants as ProductVariant[])),
+      validation: (rule) =>
+        rule.custom((variants) => validateVariants(variants as ProductVariant[])),
       description:
         'Single field to define product variants with name, price, stock, and optional image.',
     }),
@@ -295,12 +318,13 @@ export const productType = defineType({
     select: {
       title: 'name',
       media: 'image',
+      galleryMedia: 'images.0',
       isActive: 'isActive',
       variantCount: 'variants',
     },
-    prepare: ({title, media, isActive, variantCount}) => ({
+    prepare: ({title, media, galleryMedia, isActive, variantCount}) => ({
       title,
-      media,
+      media: media || galleryMedia,
       subtitle: `${isActive === false ? 'Inactive' : 'Active'}${Array.isArray(variantCount) && variantCount.length > 0 ? ` - ${variantCount.length} variants` : ''}`,
     }),
   },
