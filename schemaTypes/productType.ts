@@ -115,12 +115,14 @@ export const productType = defineType({
     defineField({
       name: 'category',
       title: 'Category',
-      type: 'string',
+      type: 'array',
+      of: [{type: 'string'}],
       options: {
         list: [
           {title: 'Ortodoncia', value: 'Ortodoncia'},
           {title: 'Material Gastable', value: 'Material Gastable'},
           {title: 'Equipos', value: 'Equipos'},
+          {title: 'Blanqueamiento dental', value: 'Blanqueamiento dental'},
         ],
       },
     }),
