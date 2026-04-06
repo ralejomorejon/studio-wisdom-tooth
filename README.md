@@ -22,3 +22,25 @@ SANITY_API_TOKEN=<your-token> node migrate-categories.mjs
 ```
 
 The script finds all `product` documents where `category` is a string, wraps the value in an array (`"Ortodoncia"` → `["Ortodoncia"]`), and patches them in a single batch request. Documents that already store an array are left untouched.
+
+### Fix broken product image references
+
+If a product contains image objects without `asset._ref`, Astro builds can fail with:
+`Unable to resolve image URL from source`.
+
+Run a dry check first:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:fix-images:check
+```
+
+Apply the fixes:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:fix-images:apply
+```
+
+This script only targets `product` documents and repairs these fields:
+- `image` (unsets invalid object)
+- `images[]` (removes invalid items)
+- `variants[].image` (removes invalid image object)
