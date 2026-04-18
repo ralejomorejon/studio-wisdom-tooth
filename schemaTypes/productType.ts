@@ -113,16 +113,58 @@ export const productType = defineType({
         }),
     }),
     defineField({
+      name: 'offer',
+      title: 'Offer',
+      type: 'object',
+      description: 'Optional fixed discount applied to base product and variants.',
+      fields: [
+        defineField({
+          name: 'fixedDiscount',
+          title: 'Fixed Discount (USD)',
+          type: 'number',
+          validation: (rule) => rule.min(0).precision(2),
+          description: 'Amount to subtract from the current price. Example: 2.50',
+        }),
+        defineField({
+          name: 'label',
+          title: 'Offer Label',
+          type: 'string',
+          initialValue: 'Oferta',
+          description: 'Short badge text shown in the storefront.',
+        }),
+      ],
+      validation: (rule) =>
+        rule.custom((value) => {
+          if (!value || typeof value !== 'object') {
+            return true
+          }
+
+          const fixedDiscount = (value as {fixedDiscount?: number}).fixedDiscount
+
+          if (fixedDiscount === undefined || fixedDiscount === null) {
+            return true
+          }
+
+          if (typeof fixedDiscount !== 'number' || Number.isNaN(fixedDiscount)) {
+            return 'Fixed discount must be a valid number.'
+          }
+
+          if (fixedDiscount < 0) {
+            return 'Fixed discount must be 0 or greater.'
+          }
+
+          return true
+        }),
+    }),
+    defineField({
       name: 'category',
       title: 'Category',
-      type: 'array',
-      of: [{type: 'string'}],
+      type: 'string',
       options: {
         list: [
           {title: 'Ortodoncia', value: 'Ortodoncia'},
           {title: 'Material Gastable', value: 'Material Gastable'},
           {title: 'Equipos', value: 'Equipos'},
-          {title: 'Blanqueamiento dental', value: 'Blanqueamiento dental'},
         ],
       },
     }),
@@ -138,28 +180,6 @@ export const productType = defineType({
       title: 'Main Image',
       type: 'image',
       options: {hotspot: true},
-      description: 'Primary image used as default cover and fallback.',
-    }),
-    defineField({
-      name: 'images',
-      title: 'Product Gallery',
-      type: 'array',
-      of: [
-        {
-          type: 'image',
-          options: {hotspot: true},
-          fields: [
-            defineField({
-              name: 'alt',
-              title: 'Alt text',
-              type: 'string',
-              description: 'Optional accessible description for this image.',
-            }),
-          ],
-        },
-      ],
-      description:
-        'Optional additional images for product gallery in storefront. First item can be used as fallback cover.',
     }),
     defineField({
       name: 'attributes',
@@ -320,13 +340,12 @@ export const productType = defineType({
     select: {
       title: 'name',
       media: 'image',
-      galleryMedia: 'images.0',
       isActive: 'isActive',
       variantCount: 'variants',
     },
-    prepare: ({title, media, galleryMedia, isActive, variantCount}) => ({
+    prepare: ({title, media, isActive, variantCount}) => ({
       title,
-      media: media || galleryMedia,
+      media,
       subtitle: `${isActive === false ? 'Inactive' : 'Active'}${Array.isArray(variantCount) && variantCount.length > 0 ? ` - ${variantCount.length} variants` : ''}`,
     }),
   },
