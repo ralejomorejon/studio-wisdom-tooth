@@ -1,4 +1,4 @@
-import {defineField, defineType} from 'sanity'
+import {defineArrayMember, defineField, defineType} from 'sanity'
 
 type ProductAttribute = {
   name?: string
@@ -157,16 +157,40 @@ export const productType = defineType({
         }),
     }),
     defineField({
+      name: 'categories',
+      title: 'Categories',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'reference',
+          to: [{type: 'category'}],
+          options: {
+            disableNew: false,
+          },
+        }),
+      ],
+      description:
+        'Assign one or more categories. You can also create a new category directly from this selector.',
+      validation: (rule) =>
+        rule.custom((value, context) => {
+          const hasReferences = Array.isArray(value) && value.length > 0
+          const legacyValue = (context.document as {category?: unknown})?.category
+          const hasLegacy =
+            (typeof legacyValue === 'string' && legacyValue.trim().length > 0) ||
+            (Array.isArray(legacyValue) &&
+              legacyValue.some((entry) => typeof entry === 'string' && entry.trim().length > 0))
+
+          return hasReferences || hasLegacy
+            ? true
+            : 'Select at least one category (or keep a valid legacy category value).'
+        }),
+    }),
+    defineField({
       name: 'category',
-      title: 'Category',
+      title: 'Legacy Category (fallback)',
       type: 'string',
-      options: {
-        list: [
-          {title: 'Ortodoncia', value: 'Ortodoncia'},
-          {title: 'Material Gastable', value: 'Material Gastable'},
-          {title: 'Equipos', value: 'Equipos'},
-        ],
-      },
+      description:
+        'Legacy field kept for backwards compatibility. Prefer using the Categories field above.',
     }),
     defineField({
       name: 'isActive',
@@ -180,6 +204,18 @@ export const productType = defineType({
       title: 'Main Image',
       type: 'image',
       options: {hotspot: true},
+    }),
+    defineField({
+      name: 'images',
+      title: 'Gallery Images',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'image',
+          options: {hotspot: true},
+        }),
+      ],
+      description: 'Optional extra product images used in product gallery.',
     }),
     defineField({
       name: 'attributes',

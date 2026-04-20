@@ -10,6 +10,11 @@
     "deploy-graphql": "sanity graphql deploy",
     "dev": "sanity dev",
     "start": "sanity start",
+    "sanity:migrate-category-refs:check": "node migrate-category-references.mjs",
+    "sanity:migrate-category-refs:apply": "node migrate-category-references.mjs --apply",
+    "sanity:migrate-category-refs:apply-clean": "node migrate-category-references.mjs --apply --unset-legacy",
+    "sanity:fix-category-keys:check": "node fix-category-reference-keys.mjs",
+    "sanity:fix-category-keys:apply": "node fix-category-reference-keys.mjs --apply",
     "sanity:fix-images:check": "node fix-broken-product-images.mjs",
     "sanity:fix-images:apply": "node fix-broken-product-images.mjs --apply"
   },
@@ -17,10 +22,10 @@
     "sanity"
   ],
   "dependencies": {
-    "@sanity/vision": "^5.18.0",
+    "@sanity/vision": "^5.21.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "sanity": "^5.18.0",
+    "sanity": "^5.21.0",
     "styled-components": "^6.1.18"
   },
   "devDependencies": {

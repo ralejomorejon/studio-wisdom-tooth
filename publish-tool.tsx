@@ -364,9 +364,7 @@ export function PublishTool() {
                             letterSpacing: '0.5px',
                           }}
                         >
-                          {Array.isArray(draft.category)
-                            ? draft.category.join(', ')
-                            : draft.category}
+                          {draft.category}
                         </div>
                       )}
                       {publishedDrafts.some((p) => p._id === draft._id) && (

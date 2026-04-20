@@ -10,6 +10,65 @@ Now you can do the following things:
 
 ## Migrations
 
+## Category management in Studio
+
+Products now support category references through the `Categories` field.
+
+How to add a new category from the Sanity administration:
+
+1. Open a product document.
+2. In `Categories`, click add item.
+3. Use the create option in the selector to create a new `Category` document.
+4. Publish the category and keep it selected on the product.
+
+You can also create categories first from the `Category` document section in Studio, then assign them to products.
+
+The old `category` string field remains as a fallback for compatibility while existing content is being migrated.
+
+### Migrate legacy category values to category references
+
+Use this migration to populate `product.categories` (references) from old `product.category` values.
+
+Dry run (recommended first):
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:migrate-category-refs:check
+```
+
+Apply migration:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:migrate-category-refs:apply
+```
+
+Apply migration and remove legacy field in same pass:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:migrate-category-refs:apply-clean
+```
+
+What it does:
+- Reads legacy category values from `product.category` (string or string[]).
+- Creates missing `category` documents when needed.
+- Writes references into `product.categories` without duplicating existing refs.
+- Optionally unsets `product.category` when using `--unset-legacy`.
+
+### Fix missing _key in product category references
+
+If Sanity shows "Missing keys" in the Categories field, run:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:fix-category-keys:check
+```
+
+Apply the fix:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:fix-category-keys:apply
+```
+
+This script adds `_key` values to `product.categories[]` items that are missing keys.
+
 ### Migrate product categories from string to array
 
 The `category` field on the `product` schema was changed from a `string` to an `array of strings`.
