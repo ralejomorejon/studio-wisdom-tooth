@@ -13,6 +13,8 @@
     "sanity:migrate-category-refs:check": "node migrate-category-references.mjs",
     "sanity:migrate-category-refs:apply": "node migrate-category-references.mjs --apply",
     "sanity:migrate-category-refs:apply-clean": "node migrate-category-references.mjs --apply --unset-legacy",
+    "sanity:sync-category-docs:check": "node sync-category-docs-from-products.mjs",
+    "sanity:sync-category-docs:apply": "node sync-category-docs-from-products.mjs --apply",
     "sanity:fix-category-keys:check": "node fix-category-reference-keys.mjs",
     "sanity:fix-category-keys:apply": "node fix-category-reference-keys.mjs --apply",
     "sanity:fix-images:check": "node fix-broken-product-images.mjs",

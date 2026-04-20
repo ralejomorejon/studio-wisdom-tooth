@@ -69,6 +69,22 @@ SANITY_API_TOKEN=<your-token> npm run sanity:fix-category-keys:apply
 
 This script adds `_key` values to `product.categories[]` items that are missing keys.
 
+### Sync category documents from active products
+
+If some categories used by products are missing or inactive in `category` documents, run:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:sync-category-docs:check
+```
+
+Apply the sync:
+
+```bash
+SANITY_API_TOKEN=<your-token> npm run sanity:sync-category-docs:apply
+```
+
+This script scans active products, collects category names, creates missing `category` documents, and re-activates matching inactive ones.
+
 ### Migrate product categories from string to array
 
 The `category` field on the `product` schema was changed from a `string` to an `array of strings`.

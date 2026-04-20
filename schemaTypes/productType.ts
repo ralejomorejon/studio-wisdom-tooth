@@ -171,24 +171,14 @@ export const productType = defineType({
       ],
       description:
         'Assign one or more categories. You can also create a new category directly from this selector.',
-      validation: (rule) =>
-        rule.custom((value, context) => {
-          const hasReferences = Array.isArray(value) && value.length > 0
-          const legacyValue = (context.document as {category?: unknown})?.category
-          const hasLegacy =
-            (typeof legacyValue === 'string' && legacyValue.trim().length > 0) ||
-            (Array.isArray(legacyValue) &&
-              legacyValue.some((entry) => typeof entry === 'string' && entry.trim().length > 0))
-
-          return hasReferences || hasLegacy
-            ? true
-            : 'Select at least one category (or keep a valid legacy category value).'
-        }),
+      validation: (rule) => rule.required().min(1).error('Select at least one category.'),
     }),
     defineField({
       name: 'category',
       title: 'Legacy Category (fallback)',
       type: 'string',
+      hidden: true,
+      readOnly: true,
       description:
         'Legacy field kept for backwards compatibility. Prefer using the Categories field above.',
     }),
